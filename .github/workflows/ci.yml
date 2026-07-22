@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker-compose:
+    name: Docker Compose check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout umbrella repository
+        uses: actions/checkout@v6
+        with:
+          path: filmoteka
+
+      - name: Checkout backend repository
+        uses: actions/checkout@v6
+        with:
+          repository: mks-filmoteka/filmoteka-backend
+          path: filmoteka-backend
+
+      - name: Checkout media repository
+        uses: actions/checkout@v6
+        with:
+          repository: mks-filmoteka/filmoteka-media
+          path: filmoteka-media
+
+      - name: Checkout UI repository
+        uses: actions/checkout@v6
+        with:
+          repository: mks-filmoteka/filmoteka-ui
+          path: filmoteka-ui
+
+      - name: Prepare environment file
+        working-directory: filmoteka
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose file
+        working-directory: filmoteka
+        run: docker compose config
+
+      - name: Build all Docker images
+        working-directory: filmoteka
+        run: docker compose build
+
+      - name: Start application
+        working-directory: filmoteka
+        run: docker compose up -d
+
+      - name: Check running containers
+        working-directory: filmoteka
+        run: |
+          sleep 20
+
+          echo "Docker Compose services:"
+          docker compose ps
+
+          total=$(docker compose config --services | wc -l)
+          running=$(docker compose ps --services --filter "status=running" | wc -l)
+
+          if [ "$running" -ne "$total" ]; then
+            echo "Some services are not running."
+            docker compose logs --no-color
+            exit 1
+          fi
+
+          echo "Checking backend health..."
+          curl --fail --silent --show-error http://localhost:8080/actuator/health
+
+          echo "Checking media health..."
+          curl --fail --silent --show-error http://localhost:8081/actuator/health
+
+          echo "Checking UI..."
+          curl --fail --silent --show-error http://localhost:5173/
+
+      - name: Stop application
+        if: always()
+        working-directory: filmoteka
+        run: docker compose down -v
