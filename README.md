@@ -4,6 +4,20 @@ Filmoteka is a full-stack movie collection application.
 
 It allows managing a movie database with film details, genres, countries, actors, directors, and poster images.
 
+## Current version
+
+**Filmoteka 1.0.0**
+
+The first complete version of Filmoteka provides an administrator-facing movie catalog application with:
+
+* film, actor, and director management
+* searching, filtering, sorting, and pagination
+* poster upload and processing
+* PostgreSQL persistence with Flyway migrations
+* Docker Compose setup for the complete application
+* automated tests and GitHub Actions CI
+* OpenAPI documentation, health checks, request logging, and correlation IDs
+
 ## Repositories
 
 This repository contains Docker Compose and shared local setup.
