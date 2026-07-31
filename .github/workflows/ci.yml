@@ -25,11 +25,11 @@ jobs:
         with:
           path: filmoteka
 
-      - name: Checkout backend repository
+      - name: Checkout catalog repository
         uses: actions/checkout@v6
         with:
-          repository: mks-filmoteka/filmoteka-backend
-          path: filmoteka-backend
+          repository: mks-filmoteka/filmoteka-catalog
+          path: filmoteka-catalog
 
       - name: Checkout media repository
         uses: actions/checkout@v6
@@ -76,7 +76,7 @@ jobs:
             exit 1
           fi
 
-          echo "Checking backend health..."
+          echo "Checking catalog health..."
           curl --fail --silent --show-error http://localhost:8080/actuator/health
 
           echo "Checking media health..."
