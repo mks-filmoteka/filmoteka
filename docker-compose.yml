@@ -1,17 +1,50 @@
 services:
-  postgres:
+  catalog-postgres:
     image: postgres:17
-    container_name: filmoteka-postgres
+    container_name: filmoteka-catalog-postgres
     environment:
       POSTGRES_DB: ${CATALOG_DB_NAME}
       POSTGRES_USER: ${CATALOG_DB_USERNAME}
       POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${CATALOG_DB_PORT}:5432"
     volumes:
-      - filmoteka-postgres-data:/var/lib/postgresql/data
+      - filmoteka-catalog-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${CATALOG_DB_USERNAME} -d ${CATALOG_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  user-postgres:
+    image: postgres:17
+    container_name: filmoteka-user-postgres
+    environment:
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${USER_DB_USERNAME}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+    ports:
+      - "${USER_DB_PORT}:5432"
+    volumes:
+      - filmoteka-user-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${USER_DB_USERNAME} -d ${USER_DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak-postgres:
+    image: postgres:17
+    container_name: filmoteka-keycloak-postgres
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+      POSTGRES_USER: ${KEYCLOAK_DB_USERNAME}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - filmoteka-keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USERNAME} -d ${KEYCLOAK_DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,14 +54,17 @@ services:
       context: ../filmoteka-catalog
     container_name: filmoteka-catalog
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${CATALOG_DB_NAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://catalog-postgres:5432/${CATALOG_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${CATALOG_DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${CATALOG_DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
     ports:
       - "${CATALOG_PORT}:8080"
     depends_on:
-      postgres:
+      catalog-postgres:
         condition: service_healthy
 
   media:
@@ -38,6 +74,9 @@ services:
     environment:
       MEDIA_ROOT_LOCATION: /app/uploads
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
     ports:
       - "${MEDIA_PORT}:8081"
     volumes:
@@ -56,6 +95,47 @@ services:
       - catalog
       - media
 
+  user:
+    build:
+      context: ../filmoteka-user
+    container_name: filmoteka-user
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-postgres:5432/${USER_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
+    ports:
+      - "${USER_PORT}:8082"
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    container_name: filmoteka-keycloak
+    command: start-dev --import-realm --feature-identity-brokering-api=v2 --feature-twitter-broker=disabled
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+
 volumes:
-  filmoteka-postgres-data:
+  filmoteka-catalog-postgres-data:
+  filmoteka-user-postgres-data:
+  filmoteka-keycloak-postgres-data:
   filmoteka-media-uploads:

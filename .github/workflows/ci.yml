@@ -43,13 +43,19 @@ jobs:
           repository: mks-filmoteka/filmoteka-ui
           path: filmoteka-ui
 
+      - name: Checkout user repository
+        uses: actions/checkout@v6
+        with:
+          repository: mks-filmoteka/filmoteka-user
+          path: filmoteka-user
+
       - name: Prepare environment file
         working-directory: filmoteka
         run: cp .env.example .env
 
       - name: Validate Docker Compose file
         working-directory: filmoteka
-        run: docker compose config
+        run: docker compose config --quiet
 
       - name: Build all Docker images
         working-directory: filmoteka
@@ -62,7 +68,17 @@ jobs:
       - name: Check running containers
         working-directory: filmoteka
         run: |
-          sleep 20
+          for i in {1..30}; do
+            total=$(docker compose config --services | wc -l)
+            running=$(docker compose ps --services --filter "status=running" | wc -l)
+
+            if [ "$running" -eq "$total" ]; then
+              break
+            fi
+
+            echo "Waiting for containers... ($i/30)"
+            sleep 5
+          done
 
           echo "Docker Compose services:"
           docker compose ps
@@ -77,13 +93,29 @@ jobs:
           fi
 
           echo "Checking catalog health..."
-          curl --fail --silent --show-error http://localhost:8080/actuator/health
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
+          http://localhost:8080/actuator/health
 
           echo "Checking media health..."
-          curl --fail --silent --show-error http://localhost:8081/actuator/health
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
+          http://localhost:8081/actuator/health
+
+          echo "Checking user health..."
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
+          http://localhost:8082/actuator/health
+
+          echo "Checking keycloak realm import..."
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
+          http://localhost:8180/realms/filmoteka/.well-known/openid-configuration
 
           echo "Checking UI..."
-          curl --fail --silent --show-error http://localhost:5173/
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
+          http://localhost:5173/
+
+      - name: Show logs on failure
+        if: failure()
+        working-directory: filmoteka
+        run: docker compose logs --no-color
 
       - name: Stop application
         if: always()
