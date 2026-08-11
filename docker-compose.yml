@@ -1,7 +1,7 @@
 services:
   catalog-postgres:
     image: postgres:17
-    container_name: filmoteka-postgres
+    container_name: filmoteka-catalog-postgres
     environment:
       POSTGRES_DB: ${CATALOG_DB_NAME}
       POSTGRES_USER: ${CATALOG_DB_USERNAME}
@@ -54,10 +54,13 @@ services:
       context: ../filmoteka-catalog
     container_name: filmoteka-catalog
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${CATALOG_DB_NAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://catalog-postgres:5432/${CATALOG_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${CATALOG_DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${CATALOG_DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
     ports:
       - "${CATALOG_PORT}:8080"
     depends_on:
@@ -71,6 +74,9 @@ services:
     environment:
       MEDIA_ROOT_LOCATION: /app/uploads
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
     ports:
       - "${MEDIA_PORT}:8081"
     volumes:
@@ -97,16 +103,21 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-postgres:5432/${USER_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI}
+      AUTH_JWK_SET_URI: ${AUTH_JWK_SET_URI}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
     ports:
       - "${USER_PORT}:8082"
     depends_on:
       user-postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.0
     container_name: filmoteka-keycloak
-    command: start-dev
+    command: start-dev --import-realm --feature-identity-brokering-api=v2 --feature-twitter-broker=disabled
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB_NAME}
@@ -115,6 +126,8 @@ services:
 
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
     ports:
       - "${KEYCLOAK_PORT}:8080"
     depends_on:
