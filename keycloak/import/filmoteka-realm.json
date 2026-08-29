@@ -5,6 +5,11 @@
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "verifyEmail": false,
+  "rememberMe": true,
+  "ssoSessionIdleTimeout": 43200,
+  "ssoSessionMaxLifespan": 604800,
+  "ssoSessionIdleTimeoutRememberMe": 2592000,
+  "ssoSessionMaxLifespanRememberMe": 7776000,
   "roles": {
     "realm": [
       {
