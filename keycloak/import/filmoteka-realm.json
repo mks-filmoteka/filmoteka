@@ -12,6 +12,7 @@
   "ssoSessionMaxLifespan": 604800,
   "ssoSessionIdleTimeoutRememberMe": 2592000,
   "ssoSessionMaxLifespanRememberMe": 7776000,
+  "loginTheme": "filmoteka",
   "roles": {
     "realm": [
       {
@@ -50,6 +51,7 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
+      "baseUrl": "http://localhost:5173/",
       "redirectUris": [
         "http://localhost:5173/*"
       ],
