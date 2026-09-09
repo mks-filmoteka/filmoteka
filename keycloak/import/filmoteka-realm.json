@@ -4,7 +4,9 @@
   "enabled": true,
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
-  "verifyEmail": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "accessTokenLifespan": 300,
   "rememberMe": true,
   "ssoSessionIdleTimeout": 43200,
   "ssoSessionMaxLifespan": 604800,
@@ -70,6 +72,89 @@
           }
         }
       ]
+    }
+  ],
+  "requiredActions": [
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 40,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 57,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_EMAIL",
+      "name": "Update Email",
+      "providerId": "UPDATE_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 70,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_PROFILE",
+      "name": "Verify Profile",
+      "providerId": "VERIFY_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 100,
+      "config": {}
+    },
+    {
+      "alias": "idp_link",
+      "name": "Linking Identity Provider",
+      "providerId": "idp_link",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 120,
+      "config": {}
+    }
+  ],
+  "smtpServer": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "fromDisplayName": "Filmoteka",
+    "from": "${SMTP_USERNAME}",
+    "user": "${SMTP_USERNAME}",
+    "password": "${SMTP_PASSWORD}",
+    "auth": "true",
+    "authType": "basic",
+    "starttls": "true",
+    "ssl": "false",
+    "writeTimeout": "10000",
+    "timeout": "10000",
+    "connectionTimeout": "10000"
+  },
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": true,
+      "config": {
+        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+        "clientId": "${GOOGLE_CLIENT_ID}",
+        "issuer": "https://accounts.google.com"
+      }
     }
   ]
 }
