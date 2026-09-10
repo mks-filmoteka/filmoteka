@@ -1,0 +1,66 @@
+:root {
+    --filmoteka-text: #ceceda;
+    --filmoteka-muted: #779;
+    --filmoteka-bg: #272833;
+    --filmoteka-body-bg: #16171d;
+    --filmoteka-panel: #1f2029;
+    --filmoteka-accent: #434f73;
+    --filmoteka-radius: 5px;
+}
+
+.login-pf body {
+    color: var(--filmoteka-text);
+    background: var(--filmoteka-body-bg);
+}
+
+.pf-v5-c-login__main,
+.card-pf {
+    color: var(--filmoteka-text);
+    background: var(--filmoteka-bg);
+    border-radius: var(--filmoteka-radius);
+}
+
+#kc-header,
+.card-pf,
+.pf-v5-c-login__main-header {
+    border-top: 0;
+}
+
+.card-pf,
+input,
+select,
+textarea,
+button,
+.pf-v5-c-button,
+.pf-v5-c-alert,
+.pf-v5-c-form-control {
+    border-radius: var(--filmoteka-radius);
+}
+
+label,
+.pf-v5-c-form__label-text,
+.instruction,
+.subtitle,
+a {
+    color: var(--filmoteka-muted);
+}
+
+input,
+select,
+textarea,
+.pf-v5-c-form-control,
+.pf-v5-c-form-control input {
+    color: var(--filmoteka-accent);
+    background: var(--filmoteka-text);
+}
+
+button,
+.pf-v5-c-button {
+    color: var(--filmoteka-text);
+    background: var(--filmoteka-panel);
+}
+
+.pf-v5-c-button.pf-m-primary {
+    background: var(--filmoteka-panel);
+    border-color: var(--filmoteka-panel);
+}
