@@ -88,6 +88,8 @@ services:
       args:
         VITE_CATALOG_API_URL: ${VITE_CATALOG_API_URL}
         VITE_MEDIA_API_URL: ${VITE_MEDIA_API_URL}
+        VITE_USER_API_URL: ${VITE_USER_API_URL}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
     container_name: filmoteka-ui
     ports:
       - "${UI_PORT}:80"
