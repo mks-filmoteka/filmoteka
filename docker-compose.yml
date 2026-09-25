@@ -69,6 +69,10 @@ services:
     depends_on:
       catalog-postgres:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness" ]
+      timeout: 5s
+      start_period: 60s
 
   media:
     build:
@@ -89,6 +93,10 @@ services:
       - "${MEDIA_PORT}:8081"
     volumes:
       - filmoteka-media-uploads:/app/uploads
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness" ]
+      timeout: 5s
+      start_period: 60s
 
   ui:
     build:
@@ -129,6 +137,10 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8082/actuator/health/readiness" ]
+      timeout: 5s
+      start_period: 60s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.0
