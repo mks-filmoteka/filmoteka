@@ -2,13 +2,13 @@
 
 Filmoteka is a full-stack movie collection application.
 
-It allows managing a movie database with film details, genres, countries, actors, directors, and poster images.
+It allows managing a movie database with film details, genres, countries, actors, directors, and poster images, as well as personal film collections.
 
-## Current development version
+## Current version
 
-**Filmoteka 2.0.0-SNAPSHOT**
+**Filmoteka 2.0.0**
 
-The first complete version of Filmoteka provides an administrator-facing movie catalog application with:
+The current development version provides a movie catalog application with:
 
 * film, actor, and director management
 * searching, filtering, sorting, and pagination
@@ -26,26 +26,33 @@ Related repositories:
 
 * `filmoteka-catalog` — Java/Spring Boot catalog API
 * `filmoteka-media` — Kotlin/Spring Boot media service for poster upload and retrieval
+* `filmoteka-user` — Java/Spring Boot user profiles and personal film lists
 * `filmoteka-ui` — React/TypeScript frontend
 * `filmoteka` — Docker Compose setup
 
 ## Architecture
 
-```text
-React UI
-   |
-   | REST API
-   v
-Catalog service  ---- PostgreSQL
-   |
-   | stores poster filename
-   v
-Media service ---- local media storage
+```mermaid
+flowchart TD
+    UI[React UI] --> Catalog[Catalog service]
+    UI --> Media[Media service]
+    UI --> User[User service]
+    UI -->|Sign-in| Keycloak
+    User -->|Film validation| Catalog
+    Catalog -->|Outbox events| Kafka
+    Kafka -->|Poster cleanup| Media
+    Kafka -->|List cleanup| User
 ```
 
 The catalog manages film data.
 The media service stores and serves poster images.
-The UI communicates with both services.
+The user service manages profiles and personal film lists.
+The UI communicates with all three services and uses Keycloak for sign-in.
+
+Catalog and user have separate PostgreSQL databases. Media stores posters in a Docker volume.
+
+Catalog records film-deletion and poster-change events in a database outbox and publishes them to Kafka.
+User and media process these events to remove deleted films from lists and delete old posters asynchronously.
 
 ## Tech stack
 
@@ -54,6 +61,8 @@ The UI communicates with both services.
 * Spring Boot
 * PostgreSQL
 * Flyway
+* Kafka
+* Keycloak
 * React
 * TypeScript
 * Vite
@@ -66,16 +75,21 @@ The UI communicates with both services.
 ## Features
 
 * Film list and details page
-* Create and update films
+* Create, update, and delete films
 * Actors and directors
 * Genres and countries
 * Poster upload and display
 * Separate media service
+* Sign-in and role-based access
+* User profiles and personal film lists
+* Automatic poster and list cleanup through Kafka
 * Docker Compose local setup
 * Health checks
 * Request logging with correlation IDs
 
 ## Running with Docker Compose
+
+Clone all five repositories into the same parent directory. Run the following commands from `filmoteka`, using Docker Compose v2 with `--wait` support.
 
 Create a local environment file:
 
@@ -83,29 +97,50 @@ Create a local environment file:
 Copy-Item .env.example .env
 ```
 
-Start the application:
+Check the Compose configuration:
 
 ```powershell
-docker compose up --build
+docker compose config --quiet
 ```
+
+Build and start the infrastructure and application in the background:
+
+```powershell
+docker compose up -d --wait catalog-postgres user-postgres keycloak kafka
+docker compose up -d --build --wait
+```
+
+Rerun the second command after code changes. To build images without starting containers, use `docker compose build`.
+
+Check container status and follow application logs:
+
+```powershell
+docker compose ps
+docker compose logs -f catalog media user
+```
+
+Press `Ctrl+C` to stop following logs; the containers keep running.
 
 Useful URLs:
 
-```text
-UI:                 http://localhost
-Catalog health:     http://localhost:8080/actuator/health
-Catalog Swagger UI: http://localhost:8080/swagger-ui/index.html
-Media health:       http://localhost:8081/actuator/health
-Media Swagger UI:   http://localhost:8081/swagger-ui/index.html
-```
+| Service | URL |
+|---|---|
+| UI | [http://localhost:5173](http://localhost:5173) |
+| Catalog health | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) |
+| Catalog Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
+| Media health | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) |
+| Media Swagger UI | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) |
+| User health | [http://localhost:8082/actuator/health](http://localhost:8082/actuator/health) |
+| User Swagger UI | [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html) |
+| Keycloak Admin Console | [http://localhost:8180/admin](http://localhost:8180/admin) |
 
-Stop the application:
+Stop and remove the containers while keeping their stored data:
 
 ```powershell
 docker compose down
 ```
 
-Stop and remove volumes:
+Stop and remove volumes, including databases, Keycloak accounts, posters, and Kafka data:
 
 ```powershell
 docker compose down -v
@@ -115,11 +150,14 @@ docker compose down -v
 
 Services can also be run separately:
 
-```text
-filmoteka-catalog  -> http://localhost:8080
-filmoteka-media    -> http://localhost:8081
-filmoteka-ui       -> http://localhost:5173
-```
+| Application | Address |
+|---|---|
+| filmoteka-catalog | [http://localhost:8080](http://localhost:8080) |
+| filmoteka-media | [http://localhost:8081](http://localhost:8081) |
+| filmoteka-user | [http://localhost:8082](http://localhost:8082) |
+| filmoteka-ui | [http://localhost:5173](http://localhost:5173) |
+
+Keep PostgreSQL, Keycloak, and Kafka running in Docker. Stop the corresponding application containers before starting services from an IDE. See each repository's README for local configuration.
 
 Frontend:
 
@@ -128,7 +166,7 @@ npm install
 npm run dev
 ```
 
-Catalog tests:
+Catalog and user tests, from each repository:
 
 ```powershell
 .\mvnw.cmd test
@@ -148,6 +186,8 @@ npm run test
 npm run build
 ```
 
+Database integration tests require Docker.
+
 ## Environment variables
 
 Example environment variables are provided in:
@@ -158,11 +198,19 @@ Example environment variables are provided in:
 
 The local `.env` file is ignored by Git.
 
+SMTP and Google credentials are placeholders. Configure them to use email verification, password-reset emails, or Google login.
+
+For a local account without email setup, open the Keycloak Admin Console using `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from `.env`. Create a user in the `filmoteka` realm with a username, email, first name, and last name. Enable **Email verified** and set a password with **Temporary** off.
+
+Catalog browsing is public. Personal lists require sign-in; managing catalog entries and posters requires the `ADMIN` realm role.
+
 ## Observability
 
-Catalog and media services expose Spring Boot Actuator health endpoints.
+Catalog, media, and user services expose Spring Boot Actuator health endpoints.
 
-Both services log completed requests and include a correlation ID when available.
+Docker health checks use `/actuator/health/readiness`. Health details, `/actuator/info`, and `/actuator/metrics` require the `ADMIN` role.
+
+All three services log completed requests and include a correlation ID when available.
 
 Example:
 
